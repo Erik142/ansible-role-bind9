@@ -1,2 +1,24 @@
 ---
 # tasks file for bind9
+- name: Include OS-specific vars
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_facts.distribution }}_{{ ansible_facts.distribution_major_version }}.yml"
+    - "{{ ansible_facts.os_family }}.yml"
+  tags:
+    - "role::bind9"
+    - "role::bind9:install"
+    - "role::bind9:config"
+
+- name: Install Bind9 server
+  ansible.builtin.import_tasks: install.yml
+  tags:
+    - "role::bind9"
+    - "role::bind9:install"
+
+- name: Configure Bind9 server
+  ansible.builtin.import_tasks: config.yml
+  tags:
+    - "role::bind9"
+    - "role::bind9:config"

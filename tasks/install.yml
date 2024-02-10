@@ -1,0 +1,13 @@
+---
+# tasks file for installing bind9
+- name: Ensure that bind9 is installed
+  package:
+    name: "{{ bind9_packages }}"
+    state: present
+
+- name: Ensure that bind9 is enabled on boot
+  service:
+    name: "{{ bind9_service }}"
+    enabled: yes
+  tags:
+    - role::bind9:service

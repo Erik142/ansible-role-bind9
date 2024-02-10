@@ -1,0 +1,8 @@
+include "{{ include_conf_dir }}/named.conf.options";
+include "{{ include_conf_dir }}/named.conf.logging";
+include "{{ include_conf_dir }}/named.conf.ddns";
+include "{{ include_conf_dir }}/named.conf.zones";
+
+{% for file in extra_config_files %}
+include "{{ include_conf_dir }}/{{ file | basename }}";
+{% endfor %}

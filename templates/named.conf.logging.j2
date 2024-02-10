@@ -1,0 +1,26 @@
+logging {
+        channel default_debug {
+                file "data/named.run";
+                severity dynamic;
+        };
+
+        channel queries_log {
+          file "{{ zones_dir }}/log/queries" versions 5 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+        };
+
+        channel query-errors_log {
+          file "{{ zones_dir }}/log/query-errors" versions 5 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity dynamic;
+        };
+
+        category queries { queries_log; };
+        category query-errors { query-errors_log; };
+};
+

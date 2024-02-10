@@ -1,0 +1,65 @@
+#jinja2: trim_blocks: False
+options {
+        listen-on port 53 {
+        {%- for address in listen_addresses %}
+                {{ address }};
+        {%- endfor %}
+        };
+
+        listen-on-v6 port 53 {
+        {%- for address in listen_addresses_v6 %}
+                {{ address }};
+        {%- endfor %}
+        };
+
+
+        allow-query {
+        {%- for network in allow_query %}
+                {{ network }};
+        {%- endfor %}
+        };
+
+
+        directory       "{{ zones_dir }}";
+        dump-file       "{{ zones_dir }}/data/cache_dump.db";
+        statistics-file "{{ zones_dir }}/data/named_stats.txt";
+        memstatistics-file "{{ zones_dir }}/data/named_mem_stats.txt";
+        recursing-file  "{{ zones_dir }}/data/named.recursing";
+        managed-keys-directory "{{ zones_dir }}/dynamic";
+
+
+        pid-file "/run/named/named.pid";
+        session-keyfile "/run/named/session.key";
+
+        {%- if recursive %}
+
+        recursion yes;
+
+        {%- else %}
+
+        recursion no;
+
+        {%- endif %}
+        {%- if forwarding %}
+
+        forward first;
+
+        forwarders {
+        {%- for address in forwarders %}
+                {{ address }};
+        {%- endfor %}
+        };
+
+        {%- else %}
+
+        forward none;
+
+        {%- endif %}
+        {%- if dnssec_validate %}
+
+        dnssec-validation yes;
+        {%- else %}
+
+        dnssec-validation no;
+        {%- endif %}
+};

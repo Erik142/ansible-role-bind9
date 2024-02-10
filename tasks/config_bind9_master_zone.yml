@@ -1,0 +1,45 @@
+- name: get current bind9 serial
+  block:
+    - name: Read master zone db file contents
+      ansible.builtin.slurp:
+        path: "{{ host_dir_prefix}}{{ zones_dir }}/master/db.{{ item.name }}"
+      register: bind9_current
+
+    - name: Try to read current master zone db serial
+      ansible.builtin.set_fact:
+        bind9_serial_old: "{{ (bind9_current.content | b64decode | regex_search('[0-9]+[ ]+; Serial'))[0:10] }}"
+  rescue:
+    - name: Set fallback master zone db serial
+      ansible.builtin.set_fact:
+        bind9_serial_old: "{{ now(fmt= '%Y%m%d') }}00"
+
+- name: Ensure that bind9 master zone files are present
+  template:
+    src: named.db.j2
+    dest: "{{ host_dir_prefix }}{{ zones_dir }}/{{ item.type }}/db.{{ item.name }}"
+    setype: named_zone_t
+  register: bind9_master_db
+
+- name: Set serial date and counter
+  ansible.builtin.set_fact:
+    bind9_serial_date: "{{ bind9_serial_old[0:8] }}"
+    bind9_serial_counter: "{{ bind9_serial_old[8:10] }}"
+
+- name: Update bind9 master zone serial
+  block:
+    - name: Increment master zone db serial counter
+      ansible.builtin.set_fact:
+        bind9_serial: "{{ now(fmt= '%Y%m%d') }}{{ '%02d' | format(bind9_serial_counter | int + 1) }}"
+      when: bind9_serial_date == now(fmt= "%Y%m%d")
+
+    - name: Update master zone db serial date
+      ansible.builtin.set_fact:
+        bind9_serial: "{{ now(fmt= '%Y%m%d') }}00"
+      when: bind9_serial_date != now(fmt= "%Y%m%d")
+
+    - name: Update serial in master zone db file
+      lineinfile:
+        path: "{{ host_dir_prefix }}{{ zones_dir }}/{{ item.type }}/db.{{ item.name }}"
+        regexp: "[0-9]+[ ]+; Serial"
+        line: "{{ bind9_serial }} ; Serial"
+  when: bind9_master_db.changed

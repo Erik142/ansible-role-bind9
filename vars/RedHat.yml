@@ -1,0 +1,7 @@
+---
+bind9_packages:
+  - "bind"
+  - "bind-utils"
+
+cron_packages:
+  - cronie

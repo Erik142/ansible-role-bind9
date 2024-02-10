@@ -1,0 +1,22 @@
+#jinja2: trim_blocks: False
+{% set zone=item %}
+
+$ORIGIN {{ zone.origin|default('.') }}
+$TTL {{ zone.ttl|default('60') }}  ; {{ zone.ttl|default('60') }} seconds
+{{ zone.name }}  IN SOA  {{ zone.ns_server|default('dns01') }}.{{ zone.name }}. {{ zone.ns_admin|default('admin') }}.{{ zone.name }}. (
+{{ bind9_serial_old }} ; Serial
+{{ zone.refresh|default('604800') }}     ; refresh (1 week)
+{{ zone.refresh|default('86400') }}      ; retry (1 day)
+{{ zone.expire|default('2419200') }}    ; expire (4 weeks)
+{{ zone.minimum|default('5') }}          ; minimum (5 seconds)
+)
+
+$ORIGIN {{ zone.name }}.
+@ IN NS {{ zone.ns_server|default('dns01') }}.{{ zone.name }}.
+{{ zone.ns_server|default('dns01') }} IN A {{ ansible_default_ipv4.address }}
+
+{%- if zone.records|default([])|length > 0 %}
+{%- for record in zone.records %}
+{{ record.name }} IN {{ record.type }} {{ record.dest }}
+{%- endfor %}
+{%- endif %}

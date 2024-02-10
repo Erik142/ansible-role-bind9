@@ -1,0 +1,153 @@
+---
+# tasks file for configuring bind9
+- name: Ensure that zone/config directories are present
+  block:
+    - name: Ensure that logging directory is present
+      file:
+        path: "{{ host_dir_prefix }}{{ zones_dir }}/log"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: 0777
+    - name: Ensure that master zones directory is present
+      file:
+        path: "{{ host_dir_prefix }}{{ zones_dir }}/master"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: 0777
+    - name: Ensure that slave zones directory is present
+      file:
+        path: "{{ host_dir_prefix }}{{ zones_dir }}/slave"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: 0777
+    - name: Ensure that data directory is present
+      file:
+        path: "{{ host_dir_prefix }}{{ zones_dir }}/data"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: 0777
+    - name: Ensure that dynamic directory is present
+      file:
+        path: "{{ host_dir_prefix }}{{ zones_dir }}/dynamic"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: 0777
+
+- name: Ensure that logging files are present
+  block:
+    - name: Ensure that query log file is present
+      file:
+        path: "{{ host_dir_prefix }}{{ zones_dir }}/log/query"
+        access_time: preserve
+        modification_time: preserve
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: 0777
+        state: touch
+    - name: Ensure that query errors log file is present
+      file:
+        path: "{{ host_dir_prefix }}{{ zones_dir }}/log/query-errors"
+        access_time: preserve
+        modification_time: preserve
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: 0777
+        state: touch
+- name: Ensure that custom configuration files are present
+  copy:
+    src: "{{ item }}"
+    dest: "{{ host_dir_prefix}}{{ include_conf_dir }}/"
+    owner: "{{ user }}"
+    group: "{{ group }}"
+  with_items: "{{ extra_config_files }}"
+
+- name: Ensure that configuration files are present
+  block:
+    - name: "Ensure that named configuration files are present"
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        setype: named_conf_t
+        validate: "{{ item.validate }}"
+      with_items:
+        - name: named.conf.options
+          src: named.conf.options.j2
+          dest: "{{ host_dir_prefix}}{{ include_conf_dir }}/named.conf.options"
+          validate: "named-checkconf %s"
+        - name: named.conf.logging
+          src: named.conf.logging.j2
+          dest: "{{ host_dir_prefix}}{{ include_conf_dir }}/named.conf.logging"
+          validate: "named-checkconf %s"
+        - name: named.conf.ddns
+          src: named.conf.ddns.j2
+          dest: "{{ host_dir_prefix}}{{ include_conf_dir }}/named.conf.ddns"
+          validate: "named-checkconf %s"
+        - name: named.conf.zones
+          src: named.conf.zones.j2
+          dest: "{{ host_dir_prefix}}{{ include_conf_dir }}/named.conf.zones"
+          validate: "named-checkconf %s"
+        - name: named.conf
+          src: named.conf.j2
+          dest: "{{ host_dir_prefix}}{{ conf_dir }}/named.conf"
+          validate: ""
+  notify: Restart bind9
+
+- name: Configure bind9 master zone files
+  include_tasks: config_bind9_master_zone.yml
+  with_items: "{{ zones }}"
+  when: item.type == "master"
+
+- name: Ensure that bind9 slave zone files are present
+  file:
+    path: "{{ zones_dir }}/{{ item.type }}/{{ item.name }}"
+    access_time: preserve
+    modification_time: preserve
+    owner: "{{ user }}"
+    group: "{{ group }}"
+    state: touch
+  with_items: "{{ zones }}"
+  when: item.type == "slave"
+
+- name: Ensure that bind9 is started
+  service:
+    name: "{{ bind9_service }}"
+    state: started
+  tags:
+    - role::bind9:service
+
+- name: Ensure that periodic rndc sync is enabled
+  block:
+    - name: Ensure that cron is installed on the system
+      package:
+        name: "{{ cron_packages }}"
+        state: present
+
+    - name: Ensure that rndc sync is performed every minute
+      lineinfile:
+        path: /etc/crontab
+        regex: "^\\* \\* \\* \\* \\* root rndc sync -clean"
+        line: "* * * * * root rndc sync -clean"
+
+    - name: Ensure that /etc/crontab SELinux type is set correctly
+      file:
+        path: "/etc/crontab"
+        access_time: preserve
+        modification_time: preserve
+        owner: root
+        group: root
+        state: touch
+        setype: system_cron_spool_t
+
+    - name: Ensure that crond is started and enabled on boot
+      service:
+        name: crond
+        state: started
+        enabled: yes
+  when: rndc_sync == True

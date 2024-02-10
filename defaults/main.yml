@@ -1,2 +1,39 @@
 ---
 # defaults file for bind9
+
+# Run as user/group
+user: "named"
+group: "named"
+bind9_service: named
+
+# Global options
+listen_addresses:
+  - 127.0.0.1
+  - "{{ ansible_default_ipv4.address }}"
+listen_addresses_v6:
+  - ::1
+allow_query:
+  - localhost
+
+conf_dir: "/etc"
+include_conf_dir: "/etc/named"
+host_dir_prefix: ""
+zones_dir: "/var/named"
+
+extra_config_files: []
+
+recursive: True
+forwarding: False
+dnssec_validate: False
+
+rndc_sync: False
+
+forwarders: []
+
+# Dynamic DNS options
+ddns_keys: []
+zone_transfer_keys: []
+zone_transfer_servers: []
+
+# DNS zones
+zones: []

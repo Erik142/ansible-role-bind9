@@ -1,0 +1,62 @@
+#jinja2: trim_blocks: False
+{%- for zone in zones %}
+zone "{{ zone.name }}" {
+        type {{ zone.type }};
+        {%- if zone.type == "master" or zone.type == "slave " %}
+        file "{{ zones_dir }}/{{ zone.type }}/db.{{ zone.name }}";
+        {%- endif %}
+
+        {%- if zone.type == "master" %}
+        {%- if zone.ddns %}
+        {%- if zone.ddns_update_keys|default([])|length > 0 %}
+
+        allow-update {
+        {%- for update_key in zone.ddns_update_keys %}
+                key {{ update_key }};
+        {%- endfor %}
+        };
+        {%- endif %}
+        {%- if zone.transfer_keys|default([])|length > 0 or zone.transfer_servers|default([])|length > 0 %}
+
+        allow-transfer {
+        {%- if zone.transfer_keys|default([])|length > 0 %}
+        {%- for transfer_key in zone.transfer_keys %}
+                key {{ transfer_key }};
+        {%- endfor %}
+        {%- endif %}
+        {%- if zone.transfer_servers|default([])|length > 0 %}
+        {%- for transfer_server in zone.transfer_servers %}
+                {{ transfer_server }};
+        {%- endfor %}
+        {%- endif %}
+        };
+        {%- endif %}
+        {%- if zone.notify_servers|default([])|length > 0 %}
+
+        also-notify {
+        {%- for server in zone.notify_servers %}
+                {{ server }};
+        {%- endfor %}
+        };
+        {%- endif %}
+        {%- endif %}
+        {%- endif %}
+        {%- if zone.type == "slave" %}
+        masters {
+        {%- for server in zone.masters %}
+                {{ server }};
+        {%- endfor %}
+        };
+        {%- endif %}
+        {%- if zone.type == "forward" %}
+        forward only;
+
+        forwarders {
+        {%- for forwarder in zone.forwarders %}
+                {{ forwarder }};
+        {%- endfor %}
+        };
+        {%- endif %}
+};
+
+{% endfor %}

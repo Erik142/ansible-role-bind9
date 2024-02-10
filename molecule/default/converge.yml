@@ -1,8 +1,54 @@
 ---
 - name: Converge
   hosts: all
-  gather_facts: false
-  tasks:
-    - name: Replace this task with one that validates your content
-      ansible.builtin.debug:
-        msg: "This is the effective test"
+  gather_facts: true
+  vars:
+    listen_addresses:
+      - 1.2.3.4
+      - 2.3.4.5
+      - "{{ ansible_default_ipv4.address }}"
+    forwarding: True
+    forwarders:
+      - 3.4.5.6
+      - 4.5.6.7
+    dnssec_validate: False
+    rndc_sync: True
+    ddns_keys:
+      - name: mytestkey
+        algorithm: hmac-sha256
+        secret: "3Z1akvKU1RHe+MvFdhZqecqyQ765E6FNj+I5vafG5Pc="
+    zone_transfer_servers:
+      - ip: 10.243.0.4
+        keys:
+          - mytestkey
+
+    zones:
+      - name: master.mydomain.com
+        type: master
+        ddns: True
+        ddns_update_keys:
+          - mytestkey
+        transfer_keys:
+          - mytestkey
+        transfer_servers:
+          - 1.2.3.4
+        notify_servers:
+          - 1.2.3.4
+        records:
+          - name: myrecord
+            type: A
+            dest: 192.168.10.10
+          - name: mycname
+            type: CNAME
+            dest: myrecord.master.mydomain.com.
+      - name: forward.mydomain.com
+        type: forward
+        forwarders:
+          - 10.10.10.20
+      - name: slave.mydomain.com
+        type: slave
+        masters:
+          - 10.10.10.10
+
+  roles:
+    - bind9
