@@ -80,7 +80,7 @@
         - name: named.conf.options
           src: named.conf.options.j2
           dest: "{{ host_dir_prefix}}{{ include_conf_dir }}/named.conf.options"
-          validate: "named-checkconf %s"
+          validate: ""
         - name: named.conf.logging
           src: named.conf.logging.j2
           dest: "{{ host_dir_prefix}}{{ include_conf_dir }}/named.conf.logging"
