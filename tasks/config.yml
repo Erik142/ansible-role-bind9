@@ -106,7 +106,7 @@
 
 - name: Ensure that bind9 slave zone files are present
   file:
-    path: "{{ zones_dir }}/{{ item.type }}/{{ item.name }}"
+    path: "{{ host_dir_prefix}}{{ zones_dir }}/{{ item.type }}/{{ item.name }}"
     access_time: preserve
     modification_time: preserve
     owner: "{{ user }}"
